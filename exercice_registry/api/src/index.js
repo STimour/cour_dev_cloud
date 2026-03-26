@@ -50,6 +50,27 @@ app.get("/health", async (_, res) => {
 });
 
 // =======================
+// Helpers
+// =======================
+
+function isNonEmptyString(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function isStringOrUndefined(v) {
+  return v === undefined || typeof v === "string";
+}
+
+function parseId(req, res) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "Id invalide, veuillez fournir un entier positif" });
+    return null;
+  }
+  return id;
+}
+
+// =======================
 // CRUD NOTES
 // =======================
 
@@ -75,6 +96,43 @@ app.post("/notes", async (req, res) => {
   );
 
   res.status(201).json(result.rows[0]);
+});
+
+// PUT /notes/:id
+app.put("/notes/:id", async (req, res) => {
+  const id = parseId(req, res);
+  if (id === null) return;
+
+  const { title, content } = req.body;
+
+  if (!isNonEmptyString(title)) {
+    return res.status(400).json({
+      error: "le title est requis et doit être une chaîne de caractères non vide",
+    });
+  }
+
+  if (!isStringOrUndefined(content)) {
+    return res.status(400).json({
+      error: "le content doit être une chaîne de caractères si fourni",
+    });
+  }
+
+  const result = await pool.query(
+    `
+    UPDATE notes
+    SET title = $1,
+        content = $2
+    WHERE id = $3
+    RETURNING *
+    `,
+    [title.trim(), content ?? "", id]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: "note not found" });
+  }
+
+  res.json(result.rows[0]);
 });
 
 // GET /notes/:id
