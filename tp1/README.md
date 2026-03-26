@@ -152,17 +152,6 @@ Le Dockerfile de l'API utilise node:18-alpine (image légère). On copie d'abord
 
 Le depends_on fait démarrer PostgreSQL avant l'API. Le script init.sql est monté dans le dossier d'init de Postgres pour créer la table automatiquement au premier lancement. Un volume db_data garde les données entre les redémarrages.
 
-### Schema de la base de donnees
-
-```sql
-CREATE TABLE IF NOT EXISTS notes (
-  id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  content TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
 ---
 
 ## Questions theoriques
