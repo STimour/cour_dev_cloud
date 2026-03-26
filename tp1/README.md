@@ -1,6 +1,6 @@
 # TP1 - Docker & Docker Compose : API Notes
 
-**Binome** : Dorian Joly & [Nom du binome]
+**Binome** : Dorian Joly & Timour Sayfoutdinov
 
 ## Description du projet
 
