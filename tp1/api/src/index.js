@@ -12,9 +12,9 @@ app.use(express.json());
 
 const pool = new Pool({});
 
-// =======================
-// Healthcheck 
-// =======================
+app.get("/health", (_, res) => {
+  res.json({ status: "ok" });
+});
 
 // =======================
 // CRUD NOTES
