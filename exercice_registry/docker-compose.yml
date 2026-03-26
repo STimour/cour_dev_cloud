@@ -1,6 +1,6 @@
 services:
   api:
-    build: ./api
+    image: dorianyloj/notes-api:v1
     ports:
       - "3000:3000"
     env_file:
