@@ -1,0 +1,28 @@
+services:
+  api:
+    build:  ./api
+    ports:
+      - "${PORT_API}:3000"
+    environment:
+      PORT: ${PORT_API}
+      PGHOST: db
+      PGPORT: ${PORT_DB}
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
+    ports:
+      - "${PORT_DB}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
