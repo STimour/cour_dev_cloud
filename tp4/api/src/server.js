@@ -1,5 +1,6 @@
 import { createApp } from "./app.js";
 import { createPoolFromEnv, waitForDb } from "./db.js";
+import logger from "./logger.js";
 
 const pool = createPoolFromEnv();
 await waitForDb(pool);
@@ -12,5 +13,5 @@ const app = createApp({ pool });
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`API is running on port ${port}`);
+  logger.info({ port }, "API is running");
 });

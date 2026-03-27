@@ -1,4 +1,5 @@
 import pkg from "pg";
+import logger from "./logger.js";
 
 const { Pool } = pkg;
 
@@ -20,11 +21,11 @@ export async function waitForDb(pool, retries = 5, delay = 3000) {
   while (retries > 0) {
     try {
       await pool.query("SELECT 1");
-      console.log("Database ready");
+      logger.info("Database ready");
       return;
     } catch (err) {
       retries--;
-      console.log("Waiting for database...", retries);
+      logger.warn({ retriesLeft: retries }, "Waiting for database...");
       await new Promise((r) => setTimeout(r, delay));
     }
   }
