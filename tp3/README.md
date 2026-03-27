@@ -2,6 +2,8 @@
 
 C'est une API pour gérer des notes (créer, lire, modifier, supprimer) avec une base PostgreSQL derrière. Le truc intéressant c'est surtout la partie CI/CD : on a mis en place des pipelines GitHub Actions pour que chaque push soit testé et que l'image Docker soit buildée et publiée automatiquement.
 
+Image Docker disponible sur Docker Hub : [dorianyloj/notes-app](https://hub.docker.com/repository/docker/dorianyloj/notes-app/general)
+
 ---
 
 ## Comment lancer le projet
