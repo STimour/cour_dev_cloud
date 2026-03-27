@@ -1,0 +1,30 @@
+name: Release - Build & Push (version tag)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/notes-app
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push versioned image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tp3/api
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ github.ref_name }}
