@@ -1,0 +1,26 @@
+{
+  "name": "taskflow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "bash scripts/install-all.sh",
+    "dev": "docker compose up --build",
+    "dev:infra": "docker compose -f docker-compose.infra.yml up -d",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint:gateway":      "npm run lint -w api-gateway",
+    "lint:user":         "npm run lint -w user-service",
+    "lint:task":         "npm run lint -w task-service",
+    "lint:notification": "npm run lint -w notification-service",
+    "test:gateway":      "npm run test -w api-gateway",
+    "test:user":         "npm run test -w user-service",
+    "test:task":         "npm run test -w task-service",
+    "test:notification": "npm run test -w notification-service"
+  },
+  "workspaces": [
+    "api-gateway",
+    "user-service",
+    "task-service",
+    "notification-service"
+  ]
+}

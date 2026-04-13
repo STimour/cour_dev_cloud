@@ -1,0 +1,44 @@
+# release.yml
+# Triggered on a tag push (e.g. git push origin v1.0.0)
+# Builds and pushes all images with the SemVer tag to Docker Hub
+# Prerequisites: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN in GitHub secrets
+
+name: Release - Build & Push (SemVer)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/taskflow
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [api-gateway, user-service, task-service, notification-service, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest

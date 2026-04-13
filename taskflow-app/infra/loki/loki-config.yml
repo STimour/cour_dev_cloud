@@ -1,0 +1,27 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  # path_prefix: ...
+
+  storage:
+    filesystem:
+      # chunks_directory: ...
+      # rules_directory: ...
+
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-01-01
+      # store: ...
+      # object_store: ...
+      # schema: ...
+      index:
+        prefix: index_
+        period: 24h

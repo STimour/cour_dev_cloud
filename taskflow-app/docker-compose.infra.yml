@@ -1,0 +1,41 @@
+  # TP : Ce fichier est volontairement incomplet.
+  # Votre mission :
+  # 1. Compléter la config OTel Collector dans infra/otel/config.yml
+  # 2. Compléter prometheus.yml avec les scrape_configs de chaque service
+  # 3. Vérifier que Grafana reçoit bien des données
+
+# services:
+#   otel-collector:
+#     image: otel/opentelemetry-collector-contrib:latest
+#     ports:
+#       - "4317:4317"   # gRPC
+#       - "4318:4318"   # HTTP
+#       - "8888:8888"   # métriques internes du collector
+#     volumes:
+#       - ./infra/otel/config.yml:/etc/otel/config.yml
+#     command: ["--config=/etc/otel/config.yml"]
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - prometheus_data:/prometheus
+
+#   grafana:
+#     image: grafana/grafana:latest
+#     ports:
+#       - "3100:3000"
+#     environment:
+#       GF_SECURITY_ADMIN_PASSWORD: admin
+#       GF_USERS_ALLOW_SIGN_UP: "false"
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./infra/grafana/provisioning:/etc/grafana/provisioning
+#     depends_on:
+#       - prometheus
+
+# volumes:
+#   prometheus_data:
+#   grafana_data:
