@@ -1,41 +1,55 @@
-  # TP : Ce fichier est volontairement incomplet.
-  # Votre mission :
-  # 1. Compléter la config OTel Collector dans infra/otel/config.yml
-  # 2. Compléter prometheus.yml avec les scrape_configs de chaque service
-  # 3. Vérifier que Grafana reçoit bien des données
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    volumes:
+      - ./infra/otel/config.yml:/etc/otel/config.yml:ro
+    command: ["--config=/etc/otel/config.yml"]
+    depends_on:
+      - tempo
 
-# services:
-#   otel-collector:
-#     image: otel/opentelemetry-collector-contrib:latest
-#     ports:
-#       - "4317:4317"   # gRPC
-#       - "4318:4318"   # HTTP
-#       - "8888:8888"   # métriques internes du collector
-#     volumes:
-#       - ./infra/otel/config.yml:/etc/otel/config.yml
-#     command: ["--config=/etc/otel/config.yml"]
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./infra/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/tmp/tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
 
-#   prometheus:
-#     image: prom/prometheus:latest
-#     ports:
-#       - "9090:9090"
-#     volumes:
-#       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-#       - prometheus_data:/prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - otel-collector
 
-#   grafana:
-#     image: grafana/grafana:latest
-#     ports:
-#       - "3100:3000"
-#     environment:
-#       GF_SECURITY_ADMIN_PASSWORD: admin
-#       GF_USERS_ALLOW_SIGN_UP: "false"
-#     volumes:
-#       - grafana_data:/var/lib/grafana
-#       - ./infra/grafana/provisioning:/etc/grafana/provisioning
-#     depends_on:
-#       - prometheus
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3100:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/provisioning/dashboard/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - tempo
 
-# volumes:
-#   prometheus_data:
-#   grafana_data:
+volumes:
+  prometheus_data:
+  grafana_data:
+  tempo_data:
