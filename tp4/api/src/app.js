@@ -72,6 +72,37 @@ export function createApp({ pool }) {
   // Healthcheck
   // =======================
 
+  app.get("/health", async (_, res) => {
+    const base = {
+      service: "notes-api",
+      timestamp: new Date().toISOString(),
+      uptime_seconds: Math.floor(process.uptime()),
+    };
+
+    try {
+      // Vérifie la dépendance critique : DB
+      await pool.query("SELECT 1");
+
+      return res.status(200).json({
+        ...base,
+        status: "ok",
+        dependencies: {
+          database: "up",
+        },
+      });
+    } catch (err) {
+      logger.error({ err }, "Healthcheck failed: database unavailable");
+
+      return res.status(503).json({
+        ...base,
+        status: "error",
+        dependencies: {
+          database: "down",
+        },
+      });
+    }
+  });
+
   // =======================
   // Métriques Prometheus
   // =======================
