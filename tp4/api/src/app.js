@@ -2,6 +2,7 @@ import express from "express";
 import pinoHttp from "pino-http";
 import logger from "./logger.js";
 import { register, httpRequestsTotal, httpResponseDuration } from "./metrics.js";
+import { livenessHandler, createReadinessHandler } from "./health_check.js";
 
 // =======================
 // Helpers
@@ -72,36 +73,11 @@ export function createApp({ pool }) {
   // Healthcheck
   // =======================
 
-  app.get("/health", async (_, res) => {
-    const base = {
-      service: "notes-api",
-      timestamp: new Date().toISOString(),
-      uptime_seconds: Math.floor(process.uptime()),
-    };
+  const readinessHandler = createReadinessHandler({ pool, logger });
 
-    try {
-      // Vérifie la dépendance critique : DB
-      await pool.query("SELECT 1");
-
-      return res.status(200).json({
-        ...base,
-        status: "ok",
-        dependencies: {
-          database: "up",
-        },
-      });
-    } catch (err) {
-      logger.error({ err }, "Healthcheck failed: database unavailable");
-
-      return res.status(503).json({
-        ...base,
-        status: "error",
-        dependencies: {
-          database: "down",
-        },
-      });
-    }
-  });
+  app.get("/live", livenessHandler);
+  app.get("/ready", readinessHandler);
+  app.get("/health", readinessHandler);
 
   // =======================
   // Métriques Prometheus

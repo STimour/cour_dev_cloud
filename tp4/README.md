@@ -235,7 +235,98 @@ J'ai utilisé `Date.now()` car la précision à la milliseconde est suffisante p
 
 ## Partie 4 — Health check
 
-> *À venir*
+### Ce que j'ai fait
+
+J'ai séparé les probes en deux endpoints dédiés et gardé un alias compatible :
+
+- `GET /live` : **liveness** (processus vivant, sans test DB)
+- `GET /ready` : **readiness** (test de la dépendance critique DB via `SELECT 1`)
+- `GET /health` : alias de `/ready`
+
+La logique est centralisée dans `api/src/health_check.js`, puis branchée dans `api/src/app.js`.
+
+### Questions théoriques
+
+**1. Réponses des endpoints quand tout fonctionne : statuts HTTP + corps**
+
+**`GET /live` → 200**
+
+```json
+{
+  "service": "notes-api",
+  "timestamp": "2026-04-13T10:00:00.000Z",
+  "uptime_seconds": 123,
+  "status": "ok",
+  "probe": "liveness"
+}
+```
+
+**`GET /ready` → 200**
+
+```json
+{
+  "service": "notes-api",
+  "timestamp": "2026-04-13T10:00:01.000Z",
+  "uptime_seconds": 124,
+  "status": "ok",
+  "probe": "readiness",
+  "dependencies": {
+    "database": "up"
+  }
+}
+```
+
+**`GET /health` → 200**
+
+Même réponse que `/ready` (alias readiness).
+
+**2. Réponses quand la base de données est down : les statuts HTTP changent-ils ?**
+
+Oui, pour les endpoints de readiness.
+
+- `GET /live` reste **200** (le process tourne toujours)
+- `GET /ready` passe à **503**
+- `GET /health` passe à **503**
+
+Exemple (`/ready` ou `/health`) :
+
+```json
+{
+  "service": "notes-api",
+  "timestamp": "2026-04-13T10:02:00.000Z",
+  "uptime_seconds": 245,
+  "status": "error",
+  "probe": "readiness",
+  "dependencies": {
+    "database": "down"
+  }
+}
+```
+
+**3. Pourquoi le statut HTTP doit refléter l'état du service, et pas seulement le JSON ?**
+
+Les orchestrateurs et load balancers (Kubernetes probes, reverse proxies, checks managés cloud) prennent d'abord leurs décisions sur le **code HTTP**. Beaucoup ne parsèment pas le corps JSON. Si on renvoie `200` avec `{"status":"error"}`, le service peut être considéré à tort comme sain et continuer à recevoir du trafic.
+
+Le code HTTP porte la sémantique réseau standard :
+
+- `200` : endpoint sain / prêt
+- `503` : indisponible temporairement (dépendance critique KO)
+
+**4. Différence livenessProbe vs readinessProbe, et correspondance des endpoints**
+
+- **livenessProbe** : vérifie que le conteneur est vivant (pas deadlock/crash logique). En échec, l'orchestrateur peut redémarrer le pod.
+- **readinessProbe** : vérifie que le service peut traiter des requêtes métier maintenant (dépendances OK). En échec, le pod est retiré du load balancing, sans forcément être redémarré.
+
+Correspondance dans ce TP :
+
+- **liveness** → `GET /live`
+- **readiness** → `GET /ready` (et `GET /health` alias)
+
+2) Quand la base est down
+    GET /live → 200 (process vivant)
+    GET /ready → 503
+    GET /health → 503
+Exemple (/ready) :
 
 ---
 
