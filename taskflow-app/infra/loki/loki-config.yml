@@ -4,12 +4,12 @@ server:
   http_listen_port: 3100
 
 common:
-  # path_prefix: ...
+  path_prefix: /loki
 
   storage:
     filesystem:
-      # chunks_directory: ...
-      # rules_directory: ...
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
 
   replication_factor: 1
   ring:
@@ -19,9 +19,9 @@ common:
 schema_config:
   configs:
     - from: 2020-01-01
-      # store: ...
-      # object_store: ...
-      # schema: ...
+      store: tsdb
+      object_store: filesystem
+      schema: v13
       index:
         prefix: index_
         period: 24h

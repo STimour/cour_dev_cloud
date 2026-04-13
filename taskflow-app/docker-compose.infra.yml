@@ -12,12 +12,12 @@ services:
       - tempo
 
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.4.2
     ports:
       - "3200:3200"
     volumes:
       - ./infra/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
-      - tempo_data:/tmp/tempo
+      - tempo_data:/var/tempo
     command: ["-config.file=/etc/tempo/tempo.yml"]
 
   prometheus:
@@ -43,13 +43,33 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./infra/grafana/provisioning/dashboard/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
       - tempo
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3101:3100"
+    volumes:
+      - ./infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    depends_on:
+      - loki
 
 volumes:
   prometheus_data:
   grafana_data:
   tempo_data:
+  loki_data:

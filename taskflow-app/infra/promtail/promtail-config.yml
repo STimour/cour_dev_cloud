@@ -2,7 +2,7 @@ server:
   http_listen_port: 9080
 
 clients:
-  - url: [...]
+  - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
   - job_name: containers
@@ -11,15 +11,21 @@ scrape_configs:
         refresh_interval: 5s
     relabel_configs:
       - source_labels: [__meta_docker_container_name]
+        regex: /(.*)
         target_label: container
       - source_labels: [__meta_docker_container_log_stream]
         target_label: stream
+      - source_labels: [__meta_docker_container_name]
+        regex: /(.*)
+        target_label: job
     pipeline_stages:
       - json:
           expressions:
-            level: [...]
-            msg: [...]
+            level: level
+            msg: msg
       - template:
-          # ...
+          source: level
+          template: |
+            {{ if eq .Value "30" }}info{{ else if eq .Value "40" }}warn{{ else if eq .Value "50" }}error{{ else }}{{ .Value }}{{ end }}
       - labels:
           level:
