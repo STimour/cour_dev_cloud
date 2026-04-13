@@ -16,12 +16,27 @@ const httpRequestDurationMs = new client.Histogram({
   buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2000]
 })
 
+const userRegistrationsTotal = new client.Counter({
+  name: 'user_registrations_total',
+  help: 'Total number of successful user registrations'
+})
+
+const userLoginAttemptsTotal = new client.Counter({
+  name: 'user_login_attempts_total',
+  help: 'Total number of login attempts',
+  labelNames: ['success']
+})
+
 // Register metrics
 register.registerMetric(httpRequestsTotal)
 register.registerMetric(httpRequestDurationMs)
+register.registerMetric(userRegistrationsTotal)
+register.registerMetric(userLoginAttemptsTotal)
 
 module.exports = {
   register,
   httpRequestsTotal,
-  httpRequestDurationMs
+  httpRequestDurationMs,
+  userRegistrationsTotal,
+  userLoginAttemptsTotal
 }

@@ -16,12 +16,36 @@ const httpRequestDurationMs = new client.Histogram({
   buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2000]
 })
 
+const tasksCreatedTotal = new client.Counter({
+  name: 'tasks_created_total',
+  help: 'Total number of tasks created',
+  labelNames: ['priority']
+})
+
+const tasksStatusChangesTotal = new client.Counter({
+  name: 'tasks_status_changes_total',
+  help: 'Total number of task status transitions',
+  labelNames: ['from_status', 'to_status']
+})
+
+const tasksGauge = new client.Gauge({
+  name: 'tasks_gauge',
+  help: 'Current number of tasks by status',
+  labelNames: ['status']
+})
+
 // Register metrics
 register.registerMetric(httpRequestsTotal)
 register.registerMetric(httpRequestDurationMs)
+register.registerMetric(tasksCreatedTotal)
+register.registerMetric(tasksStatusChangesTotal)
+register.registerMetric(tasksGauge)
 
 module.exports = {
   register,
   httpRequestsTotal,
-  httpRequestDurationMs
+  httpRequestDurationMs,
+  tasksCreatedTotal,
+  tasksStatusChangesTotal,
+  tasksGauge
 }

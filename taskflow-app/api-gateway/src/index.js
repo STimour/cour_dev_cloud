@@ -1,13 +1,34 @@
 require("./tracing");
-const { register } = require("./metrics");
+const { register, httpRequestsTotal, httpRequestDurationMs, upstreamErrorsTotal } = require("./metrics");
 const express = require("express");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const pino = require("pino");
 const pinoHttp = require("pino-http");
 const authMiddleware = require("./auth");
 
+const ERROR_CODE = 500;
+
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 const app = express();
+
+const resolveRouteLabel = (req) => {
+  if (req.route?.path) return `${req.baseUrl || ""}${req.route.path}`;
+  return req.baseUrl || req.path || "unknown";
+};
+
+app.use((req, res, next) => {
+  const end = httpRequestDurationMs.startTimer();
+  res.on("finish", () => {
+    const labels = {
+      method: req.method,
+      route: resolveRouteLabel(req),
+      status: String(res.statusCode),
+    };
+    httpRequestsTotal.inc(labels);
+    end(labels);
+  });
+  next();
+});
 
 const USER_SERVICE_URL =
   process.env.USER_SERVICE_URL || "http://localhost:3001";
@@ -55,6 +76,7 @@ app.use(
     pathRewrite: { "^/api/users": "/users" },
     on: {
       error: (err, req, res) => {
+        upstreamErrorsTotal.inc({ service: "user-service" });
         logger.error({ err }, "user-service proxy error");
         res.status(502).json({ error: "user-service unavailable" });
       },
@@ -71,6 +93,7 @@ app.use(
     pathRewrite: { "^/api/tasks": "/tasks" },
     on: {
       error: (err, req, res) => {
+        upstreamErrorsTotal.inc({ service: "task-service" });
         logger.error({ err }, "task-service proxy error");
         res.status(502).json({ error: "task-service unavailable" });
       },
@@ -87,6 +110,7 @@ app.use(
     pathRewrite: { "^/api/notifications": "/notifications" },
     on: {
       error: (err, req, res) => {
+        upstreamErrorsTotal.inc({ service: "notification-service" });
         logger.error({ err }, "notification-service proxy error");
         res.status(502).json({ error: "notification-service unavailable" });
       },

@@ -1,8 +1,49 @@
 const express = require("express");
+const { trace } = require("@opentelemetry/api");
 const db = require("./db");
 const { publish } = require("./publisher");
+const {
+  tasksCreatedTotal,
+  tasksStatusChangesTotal,
+  tasksGauge,
+} = require("./metrics");
 
 const router = express.Router();
+const tracer = trace.getTracer("task-service");
+
+const normalizePriority = (priority) => {
+  const valid = ["low", "medium", "high"];
+  return valid.includes(priority) ? priority : "medium";
+};
+
+async function refreshTasksGauge() {
+  try {
+    const result = await db.query(
+      "SELECT status, COUNT(*)::int AS total FROM tasks GROUP BY status",
+    );
+    tasksGauge.reset();
+    result.rows.forEach((row) => {
+      tasksGauge.set({ status: row.status }, Number(row.total));
+    });
+  } catch (err) {
+    console.error("Failed to refresh tasks_gauge", err);
+  }
+}
+
+async function publishWithSpan(spanName, eventName, payload) {
+  const span = tracer.startSpan(spanName, {
+    attributes: {
+      "messaging.system": "redis",
+      "messaging.destination": eventName,
+    },
+  });
+
+  try {
+    await publish(eventName, payload);
+  } finally {
+    span.end();
+  }
+}
 
 // GET /tasks
 router.get("/", async (req, res) => {
@@ -67,12 +108,15 @@ router.post("/", async (req, res) => {
       ],
     );
     const task = result.rows[0];
+    tasksCreatedTotal.inc({ priority: normalizePriority(task.priority) });
 
-    await publish("task.created", {
+    await publishWithSpan("publish.task.created", "task.created", {
       taskId: task.id,
       title: task.title,
       assigneeId: task.assignee_id,
     });
+
+    await refreshTasksGauge();
 
     res.status(201).json(task);
   } catch (err) {
@@ -114,13 +158,20 @@ router.patch("/:id", async (req, res) => {
     const task = result.rows[0];
 
     if (status && status !== current.rows[0].status) {
-      await publish("task.status_changed", {
+      tasksStatusChangesTotal.inc({
+        from_status: current.rows[0].status,
+        to_status: status,
+      });
+
+      await publishWithSpan("publish.task.status_changed", "task.status_changed", {
         taskId: task.id,
         oldStatus: current.rows[0].status,
         newStatus: status,
         assigneeId: task.assignee_id,
       });
     }
+
+    await refreshTasksGauge();
 
     res.json(task);
   } catch (err) {
@@ -137,6 +188,9 @@ router.delete("/:id", async (req, res) => {
     );
     if (!result.rows[0])
       return res.status(404).json({ error: "Task not found" });
+
+    await refreshTasksGauge();
+
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });

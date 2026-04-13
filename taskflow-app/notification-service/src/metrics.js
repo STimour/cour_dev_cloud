@@ -16,12 +16,20 @@ const httpRequestDurationMs = new client.Histogram({
   buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2000]
 })
 
+const notificationsSentTotal = new client.Counter({
+  name: 'notifications_sent_total',
+  help: 'Total notifications sent from consumed events',
+  labelNames: ['event_type']
+})
+
 // Register metrics
 register.registerMetric(httpRequestsTotal)
 register.registerMetric(httpRequestDurationMs)
+register.registerMetric(notificationsSentTotal)
 
 module.exports = {
   register,
   httpRequestsTotal,
-  httpRequestDurationMs
+  httpRequestDurationMs,
+  notificationsSentTotal
 }

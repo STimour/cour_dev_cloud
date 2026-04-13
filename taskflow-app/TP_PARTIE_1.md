@@ -138,6 +138,33 @@ span.end();
 
 - Retrouver ce span dans la vue distribuée d'une trace dans Grafana
 
+##### Compte-rendu attendu (exemple)
+
+1. **Déclenchement**
+  - Depuis le frontend, créer une tâche (POST `/api/tasks`).
+
+2. **Recherche dans Grafana / Tempo**
+  - Ouvrir **Grafana > Explore > Tempo**.
+  - Filtrer par service puis méthode HTTP :
+  ```traceql
+  { resource.service.name = "api-gateway" && span.http.method = "POST" }
+  ```
+
+3. **Chaîne de spans observée**
+  - `api-gateway` (span HTTP entrant)
+  - `task-service` (span HTTP côté service métier)
+  - `postgres` (span DB généré par l'instrumentation `pg`)
+  - `publish.task.created` (span custom Redis ajouté manuellement)
+
+4. **Attributs importants à commenter**
+  - `http.method`: méthode HTTP (`POST`)
+  - `http.route`: route instrumentée (ex: `/api/tasks` puis `/tasks`)
+  - `http.status_code`: code de retour (`201`, `4xx`, `5xx`)
+  - `db.system`: système de base (`postgresql`)
+  - `db.statement`: requête SQL exécutée (INSERT/SELECT/UPDATE)
+  - `messaging.system`: `redis` sur le span custom
+  - `messaging.destination`: canal d'évènement (`task.created`)
+
 ### C. Ajout des Logs
 
 #### Configuration

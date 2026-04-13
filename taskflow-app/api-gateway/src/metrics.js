@@ -16,12 +16,20 @@ const httpRequestDurationMs = new client.Histogram({
   buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2000]
 })
 
+const upstreamErrorsTotal = new client.Counter({
+  name: 'upstream_errors_total',
+  help: 'Total number of upstream proxy errors mapped to HTTP 502',
+  labelNames: ['service']
+})
+
 // Register metrics
 register.registerMetric(httpRequestsTotal)
 register.registerMetric(httpRequestDurationMs)
+register.registerMetric(upstreamErrorsTotal)
 
 module.exports = {
   register,
   httpRequestsTotal,
-  httpRequestDurationMs
+  httpRequestDurationMs,
+  upstreamErrorsTotal
 }

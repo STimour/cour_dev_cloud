@@ -1,5 +1,5 @@
 require("./tracing");
-const { register } = require("./metrics");
+const { register, httpRequestsTotal, httpRequestDurationMs } = require("./metrics");
 const express = require("express");
 const pino = require("pino");
 const pinoHttp = require("pino-http");
@@ -9,8 +9,29 @@ const {
   markAsRead,
 } = require("./subscriber");
 
+const ERROR_CODE = 500;
+
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 const app = express();
+
+const resolveRouteLabel = (req) => {
+  if (req.route?.path) return `${req.baseUrl || ""}${req.route.path}`;
+  return req.baseUrl || req.path || "unknown";
+};
+
+app.use((req, res, next) => {
+  const end = httpRequestDurationMs.startTimer();
+  res.on("finish", () => {
+    const labels = {
+      method: req.method,
+      route: resolveRouteLabel(req),
+      status: String(res.statusCode),
+    };
+    httpRequestsTotal.inc(labels);
+    end(labels);
+  });
+  next();
+});
 
 app.use(express.json());
 app.use(

@@ -1,5 +1,6 @@
 const { createClient } = require('redis');
 const pino = require('pino');
+const { notificationsSentTotal } = require('./metrics');
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
@@ -28,6 +29,7 @@ async function startSubscriber() {
         createdAt: new Date().toISOString(),
       };
       notifications.push(notif);
+      notificationsSentTotal.inc({ event_type: 'task.created' });
       logger.info({ notif }, 'Notification stored');
     }
   });
@@ -46,6 +48,7 @@ async function startSubscriber() {
         createdAt: new Date().toISOString(),
       };
       notifications.push(notif);
+      notificationsSentTotal.inc({ event_type: 'task.status_changed' });
     }
   });
 
