@@ -1,5 +1,7 @@
 import express from "express";
+import pinoHttp from "pino-http";
 import logger from "./logger.js";
+import { register, httpRequestsTotal, httpResponseDuration } from "./metrics.js";
 
 // =======================
 // Helpers
@@ -24,11 +26,60 @@ function parseId(req, res) {
 
 export function createApp({ pool }) {
   const app = express();
+
+  app.use(
+    pinoHttp({
+      logger,
+      customLogLevel(req, res, err) {
+        if (res.statusCode >= 500 || err) return "error";
+        if (res.statusCode >= 400) return "warn";
+        return "info";
+      },
+      customSuccessMessage(req, res) {
+        return `${req.method} ${req.url} completed`;
+      },
+      customErrorMessage(req, res, err) {
+        return err?.message ?? `${req.method} ${req.url} failed`;
+      },
+      customReceivedMessage(req) {
+        return `${req.method} ${req.url} received`;
+      },
+    }),
+  );
+
   app.use(express.json());
+
+  // =======================
+  // Middleware métriques
+  // =======================
+
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on("finish", () => {
+      const route = req.route?.path ?? req.path;
+      const labels = {
+        method: req.method,
+        route,
+        status_code: res.statusCode,
+      };
+      httpRequestsTotal.inc(labels);
+      httpResponseDuration.observe(labels, Date.now() - start);
+    });
+    next();
+  });
 
   // =======================
   // Healthcheck
   // =======================
+
+  // =======================
+  // Métriques Prometheus
+  // =======================
+
+  app.get("/metrics", async (_, res) => {
+    res.set("Content-Type", register.contentType);
+    res.send(await register.metrics());
+  });
 
   // =======================
   // CRUD NOTES
