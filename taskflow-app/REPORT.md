@@ -160,3 +160,152 @@ Pour le moment la corrélation est manuelle (copier-coller du traceId). Pour qu'
 ```
 
 Cette approche en entonnoir — métriques → logs → traces — permet d'aller du général au particulier sans chercher une aiguille dans une botte de foin.
+
+---
+
+## Partie 2 — Stress test k6
+
+### Étape 1 — Test léger (5 VUs, 30s)
+
+Commande :
+```bash
+k6 run -e TOKEN=<jwt> scripts/load-test-light.js
+```
+
+Résultat :
+
+![k6 light test](images/k6-light-test.png)
+
+```
+checks_succeeded: 100.00% (300/300)
+http_req_duration: avg=18.81ms  p(90)=23.82ms  p(95)=32.01ms
+http_req_failed:   0.00%
+```
+
+**Q1 — Latence p95 ?**
+La p95 est de **32ms**, largement sous le seuil de 200ms. Sous faible charge (5 VUs), l'application répond très rapidement.
+
+**Q2 — http_req_failed à 0% ?**
+Oui, **0% d'échecs**. Tous les checks passent (status 200 + réponse < 200ms). L'application est stable sous charge légère.
+
+---
+
+### Étape 2 — Test réaliste avec montée en charge
+
+**Test à 50 VUs (scénario progressif 3m30s) :**
+
+![k6 realistic 50 VUs](images/k6-realistic-50vus.png)
+
+```
+checks_succeeded: 100.00% (12132/12132)
+http_req_duration: avg=48.56ms  p(90)=122.55ms  p(95)=134.51ms
+http_req_failed:   0.00%
+```
+
+**Test à 200 VUs (1 min) — point de rupture :**
+
+![k6 realistic 200 VUs](images/k6-realistic-200vus.png)
+
+```
+checks_failed:  15.85% (1659/10464)
+✗ tasks response < 500ms  →  4% seulement
+http_req_duration: avg=1.19s  p(90)=2.89s  p(95)=3.22s
+```
+
+**Q3 — À quel stade le check `tasks response < 500ms` échoue massivement ?**
+Le check tient jusqu'à **50 VUs** (100% de succès, p95=134ms). À **200 VUs**, il passe à **96% d'échecs** avec une p95 à **3.22s**. Le point de rupture se situe entre 50 et 200 VUs. Les requêtes HTTP ne retournent pas d'erreur (http_req_failed=0%) — le serveur répond, mais trop lentement.
+
+**Q4 — Pourquoi l'api-gateway reçoit ~4x plus de trafic que user-service ?**
+
+![Dashboard sous charge](images/dashboard-load-test.png)
+
+Par itération dans le script, chaque VU envoie **4 requêtes** qui passent toutes par l'api-gateway :
+- POST `/api/users/login` → api-gateway + user-service (1 req chacun)
+- GET `/api/tasks` → api-gateway + task-service (1 req chacun)
+- POST `/api/tasks` → api-gateway + task-service (1 req chacun)
+- GET `/api/notifications` → api-gateway + notification-service (1 req chacun)
+
+Bilan par itération :
+- **api-gateway** : 4 requêtes
+- **task-service** : 2 requêtes
+- **user-service** : 1 requête
+- **notification-service** : 1 requête
+
+L'api-gateway reçoit donc 4x plus que user-service et 2x plus que task-service, ce qui est visible sur le panel *Request Rate per Service*.
+
+**Q5 — Pourquoi task-service est-il plus impacté ?**
+task-service reçoit **2 requêtes par itération** (GET + POST) contre 1 pour user-service. De plus, le POST `/tasks` est une opération lourde : INSERT en base + SELECT pour recharger la gauge + publication Redis. Le user-service fait uniquement une query SQL + génération JWT sans écriture.
+
+---
+
+### Étape 3 — Limites de docker scale
+
+**Q6 — Que se passe-t-il avec `docker compose up --scale task-service=3` ?**
+
+Erreur obtenue :
+```
+Bind for 0.0.0.0:3002 failed: port is already allocated
+```
+
+La cause est la ligne dans `docker-compose.yml` :
+```yaml
+task-service:
+  ports:
+    - "3002:3002"
+```
+
+Le port hôte `3002` est statique. Le premier replica le prend, les deux suivants ne peuvent pas binder le même port. Fix : supprimer le mapping de port — task-service n'est accessible que depuis l'api-gateway via le réseau Docker interne, pas depuis l'hôte.
+
+**Après fix — Test à 200 VUs avec 3 replicas :**
+
+![k6 200 VUs 3 replicas](images/k6-200vus-3replicas.png)
+
+```
+checks_failed:  11.00% (1595/14496)
+✗ tasks response < 500ms  →  34% de succès (vs 4% avant)
+http_req_duration: avg=659ms  p(90)=1.64s  p(95)=1.81s  (vs 3.22s avant)
+http_reqs: 151/s  (vs 106/s avant)
+```
+
+**Q7 — Le scaling a-t-il amélioré les métriques ? Prometheus voit combien de targets ?**
+
+Le scaling améliore les métriques :
+- p95 passe de **3.22s à 1.81s** (−44%)
+- Throughput passe de **106 req/s à 151 req/s** (+42%)
+- Le check `tasks < 500ms` passe de 4% à 34% de succès
+
+Cependant, **Prometheus ne voit qu'1 seul target** `task-service` malgré les 3 replicas. La config Prometheus scrape `task-service:3002` — Docker résout ce nom DNS vers une seule instance à la fois. Prometheus ne dispose d'aucun mécanisme pour découvrir dynamiquement les replicas supplémentaires. Il faudrait une découverte de service dynamique (Docker SD ou Kubernetes SD) pour surveiller les 3 instances individuellement.
+
+**Q8 — Pourquoi docker scale ne suffit pas en production ?**
+
+Problèmes rencontrés :
+- **Port fixe** : impossible de scaler sans modifier la config (suppression du mapping de port)
+- **Prometheus aveugle** : ne monitore qu'une instance sur 3, les métriques sont incomplètes
+- **Load balancing basique** : Docker utilise du round-robin DNS, pas de least-connections ni de health-aware routing
+- **Scaling manuel** : on scale à la main, pas en réaction à la charge réelle
+
+Ce que Kubernetes apporterait :
+- **Service discovery automatique** : Prometheus découvre tous les pods via l'API Kubernetes
+- **HPA (Horizontal Pod Autoscaler)** : scale automatiquement selon CPU, mémoire ou métriques custom
+- **Load balancing intelligent** : iptables/IPVS avec health checks, un pod défaillant est retiré automatiquement du pool
+- **Pas de conflit de ports** : les pods n'exposent pas de port hôte, la communication passe par les Services Kubernetes
+
+---
+
+### Étape 4 — Limites de l'instrumentation
+
+**Q9 — Le panel Error Rate 5xx affiche "No data" alors que k6 signale des erreurs ?**
+
+Le panel *affiche bien des données* pendant le test — des lignes apparaissent pour api-gateway et task-service. Mais la majorité des échecs k6 (1593 sur 1595) sont des **timeouts de performance** : le serveur retourne un 200 OK, juste au-delà de 500ms. Ces requêtes ne génèrent pas de 5xx, donc le panel ne les détecte pas.
+
+**Ce panel ne peut pas être utilisé pour détecter une dégradation de performance** — il ne détecte que les vraies erreurs serveur (crashes, exceptions non gérées), pas la lenteur.
+
+**Q10 — Pourquoi le panel Latence reste flat à ~3-5ms alors que k6 mesure une p95 à 1.81s ?**
+
+Le panel Grafana affiche **2.5ms à 5ms** pendant tout le test. k6 mesure une **p95 à 1.81s**. L'écart est d'un facteur ~360.
+
+Explication : OpenTelemetry instrumente le traitement **à l'intérieur de Node.js**, une fois la requête acceptée par le processus. Sous 200 VUs simultanés, les connexions TCP s'accumulent dans la **queue de l'OS** (backlog socket) avant que Node.js les dépile. Ce temps d'attente n'est jamais mesuré par l'instrumentation.
+
+k6 mesure **end-to-end depuis le client** : depuis l'envoi de la requête jusqu'à la réception de la réponse complète — ce qui inclut le temps de queue TCP, le temps de traitement Node.js et le temps de réponse réseau.
+
+Pour corriger cet écart, il faudrait mesurer la latence depuis l'extérieur du service : soit via une métrique custom dans l'api-gateway horodatant la requête dès son arrivée TCP, soit en intégrant k6 comme source de métriques dans Grafana (via k6 Cloud ou un exporter Prometheus).

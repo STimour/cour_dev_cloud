@@ -16,7 +16,7 @@ export const options = {
   duration: '30s', // pendant 30 secondes
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:3004';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 
 // Test token — replace with a real token after login
 let token = __ENV.TOKEN || '';

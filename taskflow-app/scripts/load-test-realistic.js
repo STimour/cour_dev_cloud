@@ -23,7 +23,7 @@ export const options = {
   ],
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:3004';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 const EMAIL = __ENV.EMAIL || '';
 const PASSWORD = __ENV.PASSWORD || '';
 
