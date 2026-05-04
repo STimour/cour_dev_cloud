@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-service
+  namespace: staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: task-service
+  template:
+    metadata:
+      labels:
+        app: task-service
+    spec:
+      containers:
+        - name: task-service
+          image: TON_DOCKERHUB/taskflow-task-service:v1.0.0
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3002
+
+          env:
+            - name: PORT
+              value: "3002"
+
+          envFrom:
+            - configMapRef:
+                name: taskflow-app-config
+            - secretRef:
+                name: taskflow-app-secret
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 20
+            periodSeconds: 10

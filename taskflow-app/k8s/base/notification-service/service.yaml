@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: staging
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003

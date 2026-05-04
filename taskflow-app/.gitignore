@@ -5,3 +5,7 @@ dist/
 *.log
 .DS_Store
 kubeconfig.yml
+secret.yaml
+
+app-config.yaml
+app-secret.yaml
