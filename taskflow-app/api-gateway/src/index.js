@@ -60,6 +60,14 @@ app.get("/health", (req, res) =>
   }),
 );
 
+app.get("/api/health", (req, res) =>
+  res.json({
+    status: "ok",
+    service: "api-gateway",
+    upstream: { USER_SERVICE_URL, TASK_SERVICE_URL, NOTIFICATION_SERVICE_URL },
+  }),
+);
+
 app.get("/metrics", async (req, res) => {
   res.set("Content-Type", register.contentType);
   res.end(await register.metrics());

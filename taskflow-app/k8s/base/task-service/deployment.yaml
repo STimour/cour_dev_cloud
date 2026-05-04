@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: task-service
-          image: TON_DOCKERHUB/taskflow-task-service:v1.0.0
-          imagePullPolicy: Always
+          image: dorianyloj/taskflow-task-service:v1.0.0
+          imagePullPolicy: IfNotPresent
 
           ports:
             - containerPort: 3002
@@ -44,3 +44,11 @@ spec:
               port: 3002
             initialDelaySeconds: 20
             periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 150m
+              memory: 128Mi
+            limits:
+              cpu: 700m
+              memory: 256Mi

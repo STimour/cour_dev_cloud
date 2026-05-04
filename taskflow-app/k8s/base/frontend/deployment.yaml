@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: TON_DOCKERHUB/taskflow-frontend:v1.0.0
-          imagePullPolicy: Always
+          image: dorianyloj/taskflow-frontend:v1.0.0
+          imagePullPolicy: IfNotPresent
 
           ports:
             - containerPort: 80

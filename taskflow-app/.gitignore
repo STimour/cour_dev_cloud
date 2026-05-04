@@ -9,3 +9,6 @@ secret.yaml
 
 app-config.yaml
 app-secret.yaml
+!k8s/base/app-config.yaml
+!k8s/base/app-secret.yaml
+!k8s/base/postgres/secret.yaml

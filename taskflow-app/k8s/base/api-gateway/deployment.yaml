@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: TON_DOCKERHUB/taskflow-api-gateway:v1.0.0
-          imagePullPolicy: Always
+          image: dorianyloj/taskflow-api-gateway:v1.0.0
+          imagePullPolicy: IfNotPresent
 
           ports:
             - containerPort: 3000
@@ -28,6 +28,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: taskflow-app-config
+            - secretRef:
+                name: taskflow-app-secret
 
           readinessProbe:
             httpGet:
@@ -42,3 +44,11 @@ spec:
               port: 3000
             initialDelaySeconds: 20
             periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 600m
+              memory: 256Mi
