@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: task-service
+  name: api-gateway
   namespace: staging
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: task-service
+      app: api-gateway
   template:
     metadata:
       labels:
-        app: task-service
+        app: api-gateway
     spec:
       containers:
-        - name: task-service
-          image: dorianyloj/taskflow-task-service:v1.0.0
+        - name: api-gateway
+          image: dorianyloj/taskflow-api-gateway:v1.0.0
           imagePullPolicy: IfNotPresent
 
           ports:
-            - containerPort: 3002
+            - containerPort: 3000
 
           env:
             - name: PORT
-              value: "3002"
+              value: "3000"
 
           envFrom:
             - configMapRef:
@@ -34,21 +34,21 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 3002
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 5
 
           livenessProbe:
             httpGet:
               path: /health
-              port: 3002
+              port: 3000
             initialDelaySeconds: 20
             periodSeconds: 10
 
           resources:
             requests:
-              cpu: 150m
+              cpu: 100m
               memory: 128Mi
             limits:
-              cpu: 700m
+              cpu: 600m
               memory: 256Mi
