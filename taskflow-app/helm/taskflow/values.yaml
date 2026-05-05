@@ -1,6 +1,7 @@
 image:
   prefix: bruce1000/taskflow
   pullPolicy: IfNotPresent
+  frontend-prefix: dorianyloj
 
 postgres:
   user: {{ .Values.postgres.user }}
