@@ -3,8 +3,10 @@ image:
   pullPolicy: Always
 
 postgres:
-  password: REMPLACER_PAR_MOT_DE_PASSE_FORT
-  db: taskflow_prod
+  password: {{ .Values.postgres.password }}
+  user: {{ .Values.postgres.user }}
+  db: {{ .Values.postgres.db }}
+  url: {{ .Values.postgres.url }}
   storageSize: 10Gi
 
 frontend:

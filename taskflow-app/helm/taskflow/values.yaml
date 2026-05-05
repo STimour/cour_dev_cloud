@@ -3,13 +3,14 @@ image:
   pullPolicy: IfNotPresent
 
 postgres:
-  user: taskflow
-  password: taskflow
-  db: taskflow
+  user: {{ .Values.postgres.user }}
+  password: {{ .Values.postgres.password }}
+  db: {{ .Values.postgres.db }}
+  url: {{ .Values.postgres.url }}
   storageSize: 1Gi
 
 otel:
-  endpoint: http://otel-collector:4318
+  endpoint: {{ .Values.otel.endpoint }}
 
 userService:
   replicaCount: 2
@@ -22,17 +23,35 @@ userService:
       memory: "256Mi"
       cpu: "200m"
 
-frontend:
-# [...]
+frontend:   
+  replicaCount: 2
+  tag: v1.0.1
 
 taskService:
-# [...]
+  replicaCount: 2
+  tag: v1.0.1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
 
 notificationService:
-# [...]
+  replicaCount: 1
+  tag: v1.0.1
 
 apiGateway:
-# [...]
+  replicaCount: 2
+  tag: v1.0.1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
 
 redis:
   enabled: true
