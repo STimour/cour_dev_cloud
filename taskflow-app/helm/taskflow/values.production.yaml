@@ -1,0 +1,59 @@
+# Production : images figées, secrets forts, plus de replicas, plus de ressources
+image:
+  pullPolicy: Always
+
+postgres:
+  password: REMPLACER_PAR_MOT_DE_PASSE_FORT
+  db: taskflow_prod
+  storageSize: 10Gi
+
+frontend:
+  replicaCount: 2
+
+userService:
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+taskService:
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+notificationService:
+  replicaCount: 2
+
+apiGateway:
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+redis:
+  enabled: true
+  fullnameOverride: redis
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "200m"

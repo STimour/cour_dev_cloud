@@ -1,0 +1,53 @@
+image:
+  prefix: bruce1000/taskflow
+  pullPolicy: IfNotPresent
+
+postgres:
+  user: taskflow
+  password: taskflow
+  db: taskflow
+  storageSize: 1Gi
+
+otel:
+  endpoint: http://otel-collector:4318
+
+userService:
+  replicaCount: 2
+  tag: v1.0.1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+frontend:
+# [...]
+
+taskService:
+# [...]
+
+notificationService:
+# [...]
+
+apiGateway:
+# [...]
+
+redis:
+  enabled: true
+  fullnameOverride: redis
+  architecture: standalone
+  auth:
+    enabled: false
+  image:
+    registry: docker.io
+    tag: latest
+  master:
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
