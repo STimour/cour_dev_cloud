@@ -1,10 +1,10 @@
-apiVersion: apps/{{.Chart.apiVersion}}
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
-  namespace: {{.Values.Namespace}}
+  namespace: {{ .Release.Namespace }}
 spec:
-  replicas: {{.Values.frontend.replicaCount}}
+  replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
       app: frontend
@@ -15,30 +15,34 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: "{{.Values.image.frontend-prefix}}/taskflow-frontend:{{.Values.frontend.tag}}"
-          imagePullPolicy: IfNotPresent
-
+          image: "{{ .Values.image.repository }}/taskflow-frontend:{{ .Values.frontend.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 80
-
           readinessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 5
             periodSeconds: 5
-
           livenessProbe:
             httpGet:
               path: /
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
-
           resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

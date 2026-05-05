@@ -1,0 +1,25 @@
+environment: staging
+
+image:
+  pullPolicy: IfNotPresent
+
+logging:
+  level: info
+
+postgres:
+  storageSize: 1Gi
+
+frontend:
+  replicaCount: 2
+
+userService:
+  replicaCount: 2
+
+taskService:
+  replicaCount: 2
+
+notificationService:
+  replicaCount: 2
+
+apiGateway:
+  replicaCount: 2

@@ -1,12 +1,8 @@
-# Production : images figées, secrets forts, plus de replicas, plus de ressources
+# Production : images figees, secrets fournis separement, plus de replicas, plus de ressources
 image:
   pullPolicy: Always
 
 postgres:
-  password: {{ .Values.postgres.password }}
-  user: {{ .Values.postgres.user }}
-  db: {{ .Values.postgres.db }}
-  url: {{ .Values.postgres.url }}
   storageSize: 10Gi
 
 frontend:
@@ -51,6 +47,9 @@ redis:
   architecture: standalone
   auth:
     enabled: false
+  image:
+    registry: docker.io
+    tag: latest
   master:
     resources:
       requests:

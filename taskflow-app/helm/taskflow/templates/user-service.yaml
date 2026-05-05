@@ -13,21 +13,20 @@ spec:
       labels:
         app: user-service
     spec:
-      imagePullSecrets:
-        - name: dockerhub-secret
       containers:
         - name: user-service
-          image: "{{ .Values.image.prefix }}-user-service:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}/taskflow-user-service:{{ .Values.userService.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: PORT
               value: "3001"
-            - name: DATABASE_URL
-              value: "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@postgres:5432/{{ .Values.postgres.db }}"
             - name: OTEL_SERVICE_NAME
               value: user-service
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.otel.endpoint | quote }}
+          envFrom:
+            - configMapRef:
+                name: taskflow-app-config
+            - secretRef:
+                name: taskflow-app-secret
           ports:
             - containerPort: 3001
           readinessProbe:
@@ -40,7 +39,7 @@ spec:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 10
           resources:
             {{- toYaml .Values.userService.resources | nindent 12 }}
@@ -54,5 +53,6 @@ spec:
   selector:
     app: user-service
   ports:
-    - port: 3001
+    - name: http
+      port: 3001
       targetPort: 3001

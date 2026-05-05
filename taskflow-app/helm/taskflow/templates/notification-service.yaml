@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-service
-  namespace: staging
+  namespace: {{ .Release.Namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.notificationService.replicaCount }}
   selector:
     matchLabels:
       app: notification-service
@@ -15,38 +15,42 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: dorianyloj/taskflow-notification-service:v1.0.0
-          imagePullPolicy: IfNotPresent
-
-          ports:
-            - containerPort: 3003
-
+          image: "{{ .Values.image.repository }}/taskflow-notification-service:{{ .Values.notificationService.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: PORT
               value: "3003"
-
+            - name: OTEL_SERVICE_NAME
+              value: notification-service
           envFrom:
             - configMapRef:
                 name: taskflow-app-config
-
+          ports:
+            - containerPort: 3003
           readinessProbe:
             httpGet:
               path: /health
               port: 3003
             initialDelaySeconds: 10
             periodSeconds: 5
-
           livenessProbe:
             httpGet:
               path: /health
               port: 3003
             initialDelaySeconds: 20
             periodSeconds: 10
-
           resources:
-            requests:
-              cpu: 50m
-              memory: 96Mi
-            limits:
-              cpu: 300m
-              memory: 192Mi
+            {{- toYaml .Values.notificationService.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003

@@ -1,21 +1,33 @@
 image:
-  prefix: bruce1000/taskflow
+  repository: dorianyloj
   pullPolicy: IfNotPresent
-  frontend-prefix: dorianyloj
+
+environment: staging
 
 postgres:
-  user: {{ .Values.postgres.user }}
-  password: {{ .Values.postgres.password }}
-  db: {{ .Values.postgres.db }}
-  url: {{ .Values.postgres.url }}
+  user: taskflow
+  password: ""
+  db: taskflow
   storageSize: 1Gi
 
+jwt:
+  secret: ""
+
 otel:
-  endpoint: {{ .Values.otel.endpoint }}
+  endpoint: http://otel-collector:4318
+  exportIntervalMs: "5000"
+
+services:
+  userServiceUrl: http://user-service:3001
+  taskServiceUrl: http://task-service:3002
+  notificationServiceUrl: http://notification-service:3003
+
+logging:
+  level: info
 
 userService:
   replicaCount: 2
-  tag: v1.0.1
+  tag: v1.0.0
   resources:
     requests:
       memory: "128Mi"
@@ -24,13 +36,20 @@ userService:
       memory: "256Mi"
       cpu: "200m"
 
-frontend:   
+frontend:
   replicaCount: 2
-  tag: v1.0.1
+  tag: v1.0.0
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
 
 taskService:
   replicaCount: 2
-  tag: v1.0.1
+  tag: v1.0.0
   resources:
     requests:
       memory: "128Mi"
@@ -41,11 +60,18 @@ taskService:
 
 notificationService:
   replicaCount: 1
-  tag: v1.0.1
+  tag: v1.0.0
+  resources:
+    requests:
+      memory: "96Mi"
+      cpu: "50m"
+    limits:
+      memory: "192Mi"
+      cpu: "300m"
 
 apiGateway:
   replicaCount: 2
-  tag: v1.0.1
+  tag: v1.0.0
   resources:
     requests:
       memory: "128Mi"
@@ -53,6 +79,10 @@ apiGateway:
     limits:
       memory: "256Mi"
       cpu: "200m"
+
+ingress:
+  enabled: true
+  className: nginx
 
 redis:
   enabled: true
